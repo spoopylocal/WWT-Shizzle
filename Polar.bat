@@ -90,10 +90,25 @@ if errorlevel 1 goto pinggoogle
 :pinggoogle
 cls
 echo.
-<nul set /p ="%ESC%[38;2;230;245;255m                 Pinging google.com...%ESC%[0m"
+<nul set /p ="%ESC%[38;2;230;245;255m                 Ping Google%ESC%[0m"
 echo/
 echo.
-ping google.com
+<nul set /p ="%ESC%[38;2;225;242;255m                 Number of pings [4]: %ESC%[0m"
+set "PING_COUNT="
+set /p "PING_COUNT="
+if not defined PING_COUNT set "PING_COUNT=4"
+call :validate_number "%PING_COUNT%"
+if errorlevel 1 (
+    echo.
+    <nul set /p ="%ESC%[38;2;255;210;180m                 Not a valid number. Using 4 pings.%ESC%[0m"
+    echo/
+    set "PING_COUNT=4"
+)
+echo.
+<nul set /p ="%ESC%[38;2;230;245;255m                 Pinging google.com !PING_COUNT! time(s)...%ESC%[0m"
+echo/
+echo.
+ping -n !PING_COUNT! google.com
 echo.
 pause
 goto network
@@ -424,6 +439,13 @@ if errorlevel 2 (
 
 if exist "%UPDATE_TMP%" del /f /q "%UPDATE_TMP%" >nul 2>&1
 exit /b
+
+:validate_number
+set "VALUE=%~1"
+if not defined VALUE exit /b 1
+for /f "delims=0123456789" %%A in ("%VALUE%") do exit /b 1
+if %VALUE% LSS 1 exit /b 1
+exit /b 0
 
 :sleep
 >nul ping 127.0.0.1 -n %~1
