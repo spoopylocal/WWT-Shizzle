@@ -364,6 +364,15 @@ echo/
 <nul set /p ="%ESC%[38;2;175;218;255m                    Thomas Carnell%ESC%[0m"
 echo/
 echo.
+<nul set /p ="%ESC%[38;2;205;232;255m                 Polar is a WWT Friendly Software%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;195;226;255m                 that was made to access a GitHub Repo%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;185;220;255m                 that contains files and applications%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;175;214;255m                 used by L4 in NAIC1%ESC%[0m"
+echo/
+echo.
 <nul set /p ="%ESC%[38;2;200;230;255m                 Press any key to go back...%ESC%[0m"
 echo/
 
