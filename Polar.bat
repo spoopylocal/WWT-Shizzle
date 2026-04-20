@@ -6,7 +6,12 @@ setlocal EnableDelayedExpansion
 
 for /f %%a in ('echo prompt $E^| cmd') do set "ESC=%%a"
 
+set "POLAR_HOME=%LOCALAPPDATA%\POLAR"
+set "POLAR_SOFTWARE=%POLAR_HOME%\Software"
 set "BAR_LENGTH=30"
+
+if not exist "%POLAR_HOME%" mkdir "%POLAR_HOME%" >nul 2>&1
+if not exist "%POLAR_SOFTWARE%" mkdir "%POLAR_SOFTWARE%" >nul 2>&1
 
 :banner
 cls
@@ -38,13 +43,19 @@ echo/
 echo/
 <nul set /p ="%ESC%[38;2;200;230;255m              [3]%ESC%[0m %ESC%[38;2;170;215;255mCleanup Tools%ESC%[0m"
 echo/
-<nul set /p ="%ESC%[38;2;190;225;255m              [4]%ESC%[0m %ESC%[38;2;160;210;255mExit%ESC%[0m"
+<nul set /p ="%ESC%[38;2;190;225;255m              [4]%ESC%[0m %ESC%[38;2;160;210;255mSoftware%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;180;220;255m              [5]%ESC%[0m %ESC%[38;2;150;205;255mCredits%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;170;215;255m              [6]%ESC%[0m %ESC%[38;2;140;200;255mExit%ESC%[0m"
 echo/
 echo.
 <nul set /p ="%ESC%[38;2;225;242;255mPress a number to select:%ESC%[0m "
-choice /c 1234 /n >nul
+choice /c 123456 /n >nul
 
-if errorlevel 4 goto end
+if errorlevel 6 goto end
+if errorlevel 5 goto credits
+if errorlevel 4 goto software
 if errorlevel 3 goto cleanup
 if errorlevel 2 goto system
 if errorlevel 1 goto network
@@ -209,37 +220,38 @@ echo/
 <nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
 echo/
 echo.
+<nul set /p ="%ESC%[38;2;210;235;255m                 Preparing %LABEL%...%ESC%[0m"
+echo/
+echo.
+<nul set /p ="%ESC%[38;2;120;200;255m                 [░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 0%%%ESC%[0m"
+echo/
 
 if not exist "%TARGET%" (
-    <nul set /p ="%ESC%[38;2;255;190;190m                 %LABEL% path not found.%ESC%[0m"
+    <nul set /p ="%ESC%[1A"
+    <nul set /p ="%ESC%[2K%ESC%[38;2;255;190;190m                 %LABEL% path not found.%ESC%[0m"
     echo/
     timeout /t 1 >nul
     exit /b
 )
 
 call :draw_progress 0 "Preparing %LABEL%..."
-timeout /t 1 >nul
-
+call :sleep 1
 call :draw_progress 20 "Scanning %LABEL%..."
 dir /a /s "%TARGET%" >nul 2>&1
-timeout /t 1 >nul
-
+call :sleep 1
 call :draw_progress 45 "Removing files from %LABEL%..."
 del /f /q /s "%TARGET%\*" >nul 2>&1
-timeout /t 1 >nul
-
+call :sleep 1
 call :draw_progress 75 "Removing folders from %LABEL%..."
 for /d %%D in ("%TARGET%\*") do rd /s /q "%%D" >nul 2>&1
-timeout /t 1 >nul
-
+call :sleep 1
 call :draw_progress 100 "Finished removing %LABEL%."
-timeout /t 1 >nul
+call :sleep 1
 exit /b
 
 :draw_progress
 set "PERCENT=%~1"
 set "STATUS=%~2"
-
 set /a FILLED=(PERCENT*BAR_LENGTH)/100
 set "BAR="
 
@@ -251,20 +263,114 @@ for /l %%I in (1,1,%BAR_LENGTH%) do (
     )
 )
 
+<nul set /p ="%ESC%[3A"
+<nul set /p ="%ESC%[2K%ESC%[38;2;210;235;255m                 !STATUS!%ESC%[0m"
+echo/
+echo.
+<nul set /p ="%ESC%[2K%ESC%[38;2;120;200;255m                 [!BAR!] !PERCENT!%%%ESC%[0m"
+echo/
+exit /b
+
+:software
 cls
 echo.
 <nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
 echo/
-<nul set /p ="%ESC%[38;2;230;245;255m                      Cleanup Progress%ESC%[0m"
+<nul set /p ="%ESC%[38;2;230;245;255m                         Software%ESC%[0m"
 echo/
 <nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
 echo/
 echo.
-<nul set /p ="%ESC%[38;2;210;235;255m                 !STATUS!%ESC%[0m"
+
+set "OAOOV_DIR=%POLAR_SOFTWARE%\Outbound Auto OV"
+set "OAOOV_EXE=%OAOOV_DIR%\Outbound Auto OV.exe"
+
+if exist "%OAOOV_EXE%" (
+    set "OAOOV_STATUS=Installed"
+) else (
+    set "OAOOV_STATUS=Not Installed"
+)
+
+<nul set /p ="%ESC%[38;2;190;225;255m                 [1]%ESC%[0m %ESC%[38;2;180;220;255mOutbound Auto OV%ESC%[0m %ESC%[38;2;140;200;255m(!OAOOV_STATUS!)%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;190;225;255m                 [2]%ESC%[0m %ESC%[38;2;180;220;255mBack%ESC%[0m"
 echo/
 echo.
-<nul set /p ="%ESC%[38;2;120;200;255m                 [!BAR!] !PERCENT!%%%ESC%[0m"
+<nul set /p ="%ESC%[38;2;225;242;255mPress a number to select:%ESC%[0m "
+choice /c 12 /n >nul
+
+if errorlevel 2 goto banner
+if errorlevel 1 goto outbound_auto_ov
+
+:outbound_auto_ov
+set "APP_NAME=Outbound Auto OV"
+set "APP_DIR=%POLAR_SOFTWARE%\Outbound Auto OV"
+set "APP_EXE=%APP_DIR%\Outbound Auto OV.exe"
+set "APP_VERSION=%APP_DIR%\version.txt"
+set "GITHUB_REPO=spoopylocal/WWT-Shizzle"
+set "ASSET_NAME=Outbound.Auto.OV.exe"
+
+call :HandleReleaseExe
+goto software
+
+:HandleReleaseExe
+cls
+echo.
+<nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
 echo/
+<nul set /p ="%ESC%[38;2;230;245;255m                    Software Manager%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
+echo/
+echo.
+
+if not exist "%APP_DIR%" mkdir "%APP_DIR%" >nul 2>&1
+
+echo.
+<nul set /p ="%ESC%[38;2;210;235;255m                 Checking GitHub release for %APP_NAME%...%ESC%[0m"
+echo/
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; try { [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $repo=$env:GITHUB_REPO; $asset=$env:ASSET_NAME; $dir=$env:APP_DIR; $exe=$env:APP_EXE; $verFile=$env:APP_VERSION; $headers=@{'User-Agent'='POLAR'}; New-Item -ItemType Directory -Force -Path $dir | Out-Null; $release=Invoke-RestMethod -Uri ('https://api.github.com/repos/'+$repo+'/releases/latest') -Headers $headers; $remoteVersion=[string]$release.tag_name; $localVersion=if(Test-Path $verFile){((Get-Content $verFile -Raw).Trim())}else{''}; $match=$null; foreach($a in $release.assets){ if($a.name -eq $asset){ $match=$a; break } }; if(-not $match){throw ('Release asset not found: '+$asset)}; $download=$match.browser_download_url; $badLocal=(Test-Path $exe) -and ((Get-Item $exe).Length -lt 100000); $needsDownload=(-not (Test-Path $exe)) -or $badLocal -or ($localVersion -ne $remoteVersion); if($needsDownload){ Write-Host ('Downloading '+$asset+' '+$remoteVersion+'...'); $tmp=Join-Path $env:TEMP ('polar_'+[guid]::NewGuid().ToString()+'.exe'); Invoke-WebRequest -Uri $download -OutFile $tmp -UseBasicParsing -Headers $headers; $item=Get-Item $tmp; if($item.Length -lt 100000){Remove-Item $tmp -Force; throw ('Downloaded file is too small: '+$item.Length+' bytes')}; $fs=[IO.File]::OpenRead($tmp); try{$b0=$fs.ReadByte(); $b1=$fs.ReadByte()}finally{$fs.Dispose()}; if($b0 -ne 77 -or $b1 -ne 90){Remove-Item $tmp -Force; throw 'Downloaded file is not a valid Windows EXE'}; Move-Item -Path $tmp -Destination $exe -Force; Set-Content -Path $verFile -Value $remoteVersion } else { Write-Host ('Already up to date: '+$remoteVersion) }; Write-Host ('Launching '+$env:APP_NAME+'...'); Start-Process -FilePath $exe; Start-Sleep -Seconds 2; exit 0 } catch { Write-Host ''; Write-Host ('ERROR: '+$_.Exception.Message); exit 1 }"
+
+if errorlevel 1 (
+    echo.
+    <nul set /p ="%ESC%[38;2;255;180;180m                 Update or launch failed.%ESC%[0m"
+    echo/
+    pause
+    exit /b
+)
+
+echo.
+<nul set /p ="%ESC%[38;2;180;255;210m                 %APP_NAME% is ready.%ESC%[0m"
+echo/
+timeout /t 1 >nul
+exit /b
+
+:credits
+cls
+echo.
+<nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;230;245;255m                          Credits%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
+echo/
+echo.
+<nul set /p ="%ESC%[38;2;215;238;255m                 Made by:%ESC%[0m"
+echo/
+echo.
+<nul set /p ="%ESC%[38;2;190;225;255m                    Benjamin Cullum%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;175;218;255m                    Thomas Carnell%ESC%[0m"
+echo/
+echo.
+<nul set /p ="%ESC%[38;2;200;230;255m                 Press any key to go back...%ESC%[0m"
+echo/
+
+pause >nul
+goto banner
+:sleep
+>nul ping 127.0.0.1 -n %~1
 exit /b
 
 :end
