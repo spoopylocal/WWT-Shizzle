@@ -384,15 +384,23 @@ set "CHOICES=%~1"
 :read_choice_loop
 set "KEY="
 for /f "usebackq delims=" %%K in (`powershell -NoProfile -Command "$k=$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'); [string]$k.Character"`) do set "KEY=%%K"
-if not defined KEY goto read_choice_loop
+if not defined KEY goto read_choice_invalid
 for /l %%I in (0,1,9) do (
     set "CHOICE_CHAR=!CHOICES:~%%I,1!"
-    if "!CHOICE_CHAR!"=="" goto read_choice_loop
+    if "!CHOICE_CHAR!"=="" goto read_choice_invalid
     if /i "!KEY!"=="!CHOICE_CHAR!" (
         set /a CHOICE_VALUE=%%I+1
         exit /b !CHOICE_VALUE!
     )
 )
+goto read_choice_invalid
+
+:read_choice_invalid
+echo/
+<nul set /p ="%ESC%[38;2;255;210;180m                 Not an option. Try again.%ESC%[0m"
+echo/
+timeout /t 1 >nul
+<nul set /p ="%ESC%[38;2;225;242;255mPress a number to select:%ESC%[0m "
 goto read_choice_loop
 
 :sleep
