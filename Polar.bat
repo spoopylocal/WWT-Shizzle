@@ -51,7 +51,7 @@ echo/
 echo/
 echo.
 <nul set /p ="%ESC%[38;2;225;242;255mPress a number to select:%ESC%[0m "
-choice /c 123456 /n >nul
+call :read_choice 123456
 
 if errorlevel 6 goto end
 if errorlevel 5 goto credits
@@ -78,7 +78,7 @@ echo/
 echo/
 echo.
 <nul set /p ="%ESC%[38;2;225;242;255mPress a number to select:%ESC%[0m "
-choice /c 123 /n >nul
+call :read_choice 123
 
 if errorlevel 3 goto banner
 if errorlevel 2 goto showip
@@ -124,7 +124,7 @@ echo/
 echo/
 echo.
 <nul set /p ="%ESC%[38;2;225;242;255mPress a number to select:%ESC%[0m "
-choice /c 123 /n >nul
+call :read_choice 123
 
 if errorlevel 3 goto banner
 if errorlevel 2 goto showtasks
@@ -174,7 +174,7 @@ echo/
 echo/
 echo.
 <nul set /p ="%ESC%[38;2;225;242;255mPress a number to select:%ESC%[0m "
-choice /c 12345 /n >nul
+call :read_choice 12345
 
 if errorlevel 5 goto banner
 if errorlevel 4 goto cleanup_all
@@ -297,7 +297,7 @@ echo/
 echo/
 echo.
 <nul set /p ="%ESC%[38;2;225;242;255mPress a number to select:%ESC%[0m "
-choice /c 12 /n >nul
+call :read_choice 12
 
 if errorlevel 2 goto banner
 if errorlevel 1 goto outbound_auto_ov
@@ -369,6 +369,23 @@ echo/
 
 pause >nul
 goto banner
+
+:read_choice
+set "CHOICES=%~1"
+:read_choice_loop
+set "KEY="
+for /f "usebackq delims=" %%K in (`powershell -NoProfile -Command "$k=$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'); [string]$k.Character"`) do set "KEY=%%K"
+if not defined KEY goto read_choice_loop
+for /l %%I in (0,1,9) do (
+    set "CHOICE_CHAR=!CHOICES:~%%I,1!"
+    if "!CHOICE_CHAR!"=="" goto read_choice_loop
+    if /i "!KEY!"=="!CHOICE_CHAR!" (
+        set /a CHOICE_VALUE=%%I+1
+        exit /b !CHOICE_VALUE!
+    )
+)
+goto read_choice_loop
+
 :sleep
 >nul ping 127.0.0.1 -n %~1
 exit /b
