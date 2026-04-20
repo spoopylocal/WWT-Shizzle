@@ -455,7 +455,7 @@ exit /b
 :end
 cls
 echo.
-<nul set /p ="%ESC%[38;2;210;235;255m                 Thanks for using POLAR.%ESC%[0m"
+<nul set /p ="%ESC%[38;2;210;235;255m                 Thanks for using POLAR :)%ESC%[0m"
 echo/
 timeout /t 1 >nul
 exit
