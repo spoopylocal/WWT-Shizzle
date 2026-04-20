@@ -8,10 +8,13 @@ for /f %%a in ('echo prompt $E^| cmd') do set "ESC=%%a"
 
 set "POLAR_HOME=%LOCALAPPDATA%\POLAR"
 set "POLAR_SOFTWARE=%POLAR_HOME%\Software"
+set "POLAR_UPDATE_URL=https://raw.githubusercontent.com/spoopylocal/WWT-Shizzle/refs/heads/main/Polar.bat"
 set "BAR_LENGTH=30"
 
 if not exist "%POLAR_HOME%" mkdir "%POLAR_HOME%" >nul 2>&1
 if not exist "%POLAR_SOFTWARE%" mkdir "%POLAR_SOFTWARE%" >nul 2>&1
+
+if /i not "%~1"=="--updated" call :self_update
 
 :banner
 cls
@@ -402,6 +405,25 @@ echo/
 timeout /t 1 >nul
 <nul set /p ="%ESC%[38;2;225;242;255mPress a number to select:%ESC%[0m "
 goto read_choice_loop
+
+:self_update
+set "SELF_PATH=%~f0"
+set "UPDATE_TMP=%TEMP%\polar_update_%RANDOM%.bat"
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; try { [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri $env:POLAR_UPDATE_URL -OutFile $env:UPDATE_TMP -UseBasicParsing -Headers @{'User-Agent'='POLAR'}; if((Get-Item $env:UPDATE_TMP).Length -lt 1000){throw 'Downloaded update is too small'}; $local=(Get-FileHash -Algorithm SHA256 -LiteralPath $env:SELF_PATH).Hash; $remote=(Get-FileHash -Algorithm SHA256 -LiteralPath $env:UPDATE_TMP).Hash; if($local -eq $remote){Remove-Item -LiteralPath $env:UPDATE_TMP -Force; exit 0}; exit 2 } catch { if(Test-Path -LiteralPath $env:UPDATE_TMP){Remove-Item -LiteralPath $env:UPDATE_TMP -Force}; exit 1 }"
+
+if errorlevel 2 (
+    cls
+    echo.
+    <nul set /p ="%ESC%[38;2;210;235;255m                 Updating POLAR...%ESC%[0m"
+    echo/
+    move /y "%UPDATE_TMP%" "%SELF_PATH%" >nul 2>&1
+    start "" "%SELF_PATH%" --updated
+    exit
+)
+
+if exist "%UPDATE_TMP%" del /f /q "%UPDATE_TMP%" >nul 2>&1
+exit /b
 
 :sleep
 >nul ping 127.0.0.1 -n %~1
