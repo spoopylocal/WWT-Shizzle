@@ -8,7 +8,7 @@ for /f %%a in ('echo prompt $E^| cmd') do set "ESC=%%a"
 
 set "POLAR_HOME=%LOCALAPPDATA%\POLAR"
 set "POLAR_SOFTWARE=%POLAR_HOME%\Software"
-set "POLAR_VERSION=1.0.0"
+set "POLAR_VERSION=1.0.1"
 set "POLAR_UPDATE_URL=https://raw.githubusercontent.com/spoopylocal/WWT-Shizzle/refs/heads/main/Polar.bat"
 set "BAR_LENGTH=30"
 
@@ -426,7 +426,7 @@ goto read_choice_loop
 set "SELF_PATH=%~f0"
 set "UPDATE_TMP=%TEMP%\polar_update_%RANDOM%.bat"
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; try { [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri $env:POLAR_UPDATE_URL -OutFile $env:UPDATE_TMP -UseBasicParsing -Headers @{'User-Agent'='POLAR'}; if((Get-Item $env:UPDATE_TMP).Length -lt 1000){throw 'Downloaded update is too small'}; $remoteLine=Select-String -LiteralPath $env:UPDATE_TMP -Pattern 'set ""POLAR_VERSION=([^""]+)""' | Select-Object -First 1; if(-not $remoteLine){Remove-Item -LiteralPath $env:UPDATE_TMP -Force; exit 0}; $remoteVersion=$remoteLine.Matches[0].Groups[1].Value; $localVersion=$env:POLAR_VERSION; if(([version]$remoteVersion) -le ([version]$localVersion)){Remove-Item -LiteralPath $env:UPDATE_TMP -Force; exit 0}; exit 2 } catch { if(Test-Path -LiteralPath $env:UPDATE_TMP){Remove-Item -LiteralPath $env:UPDATE_TMP -Force}; exit 1 }"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; $ErrorActionPreference='Stop'; try { [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri $env:POLAR_UPDATE_URL -OutFile $env:UPDATE_TMP -UseBasicParsing -Headers @{'User-Agent'='POLAR'}; if((Get-Item $env:UPDATE_TMP).Length -lt 1000){throw 'Downloaded update is too small'}; $remoteLine=Select-String -LiteralPath $env:UPDATE_TMP -Pattern 'set ""POLAR_VERSION=([^""]+)""' | Select-Object -First 1; if(-not $remoteLine){Remove-Item -LiteralPath $env:UPDATE_TMP -Force; exit 0}; $remoteVersion=$remoteLine.Matches[0].Groups[1].Value; $localVersion=$env:POLAR_VERSION; if(([version]$remoteVersion) -le ([version]$localVersion)){Remove-Item -LiteralPath $env:UPDATE_TMP -Force; exit 0}; exit 2 } catch { if(Test-Path -LiteralPath $env:UPDATE_TMP){Remove-Item -LiteralPath $env:UPDATE_TMP -Force}; exit 1 }"
 
 if errorlevel 2 (
     cls
