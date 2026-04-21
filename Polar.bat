@@ -8,7 +8,7 @@ for /f %%a in ('echo prompt $E^| cmd') do set "ESC=%%a"
 
 set "POLAR_HOME=%LOCALAPPDATA%\POLAR"
 set "POLAR_SOFTWARE=%POLAR_HOME%\Software"
-set "POLAR_VERSION=1.0.5"
+set "POLAR_VERSION=1.0.6"
 set "POLAR_UPDATE_URL=https://raw.githubusercontent.com/spoopylocal/WWT-Shizzle/refs/heads/main/Polar.bat"
 set "BAR_LENGTH=30"
 
@@ -482,20 +482,27 @@ goto read_choice_loop
 :self_update
 set "SELF_PATH=%~f0"
 set "UPDATE_TMP=%TEMP%\polar_update_%RANDOM%.bat"
+set "UPDATE_RUNNER=%TEMP%\polar_apply_update_%RANDOM%.cmd"
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; $ErrorActionPreference='Stop'; try { [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri $env:POLAR_UPDATE_URL -OutFile $env:UPDATE_TMP -UseBasicParsing -Headers @{'User-Agent'='POLAR'}; if((Get-Item $env:UPDATE_TMP).Length -lt 1000){throw 'Downloaded update is too small'}; $remoteLine=Select-String -LiteralPath $env:UPDATE_TMP -Pattern 'set ""POLAR_VERSION=([^""]+)""' | Select-Object -First 1; if(-not $remoteLine){Remove-Item -LiteralPath $env:UPDATE_TMP -Force; exit 0}; $remoteVersion=$remoteLine.Matches[0].Groups[1].Value; $localVersion=$env:POLAR_VERSION; if(([version]$remoteVersion) -le ([version]$localVersion)){Remove-Item -LiteralPath $env:UPDATE_TMP -Force; exit 0}; exit 2 } catch { if(Test-Path -LiteralPath $env:UPDATE_TMP){Remove-Item -LiteralPath $env:UPDATE_TMP -Force}; exit 1 }"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; $ErrorActionPreference='Stop'; try { [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri $env:POLAR_UPDATE_URL -OutFile $env:UPDATE_TMP -UseBasicParsing -Headers @{'User-Agent'='POLAR'}; if((Get-Item $env:UPDATE_TMP).Length -lt 1000){throw 'Downloaded update is too small'}; $q=[char]34; $pattern='set\s+'+$q+'POLAR_VERSION=([^'+$q+']+)'+$q; $remoteLine=Select-String -LiteralPath $env:UPDATE_TMP -Pattern $pattern | Select-Object -First 1; if(-not $remoteLine){Remove-Item -LiteralPath $env:UPDATE_TMP -Force; exit 0}; $remoteVersion=$remoteLine.Matches[0].Groups[1].Value; $localVersion=$env:POLAR_VERSION; if(([version]$remoteVersion) -le ([version]$localVersion)){Remove-Item -LiteralPath $env:UPDATE_TMP -Force; exit 0}; exit 2 } catch { if(Test-Path -LiteralPath $env:UPDATE_TMP){Remove-Item -LiteralPath $env:UPDATE_TMP -Force}; exit 1 }"
 
 if errorlevel 2 (
     cls
     echo.
     <nul set /p ="%ESC%[38;2;210;235;255m                 Updating POLAR...%ESC%[0m"
     echo/
-    move /y "%UPDATE_TMP%" "%SELF_PATH%" >nul 2>&1
-    start "" "%SELF_PATH%" --updated
+    > "%UPDATE_RUNNER%" echo @echo off
+    >> "%UPDATE_RUNNER%" echo timeout /t 1 /nobreak ^>nul
+    >> "%UPDATE_RUNNER%" echo move /y "%UPDATE_TMP%" "%SELF_PATH%" ^>nul 2^>^&1
+    >> "%UPDATE_RUNNER%" echo if errorlevel 1 pause ^& exit /b 1
+    >> "%UPDATE_RUNNER%" echo start "" "%SELF_PATH%" --updated
+    >> "%UPDATE_RUNNER%" echo del /f /q "%%~f0" ^>nul 2^>^&1
+    start "" "%UPDATE_RUNNER%"
     exit
 )
 
 if exist "%UPDATE_TMP%" del /f /q "%UPDATE_TMP%" >nul 2>&1
+if exist "%UPDATE_RUNNER%" del /f /q "%UPDATE_RUNNER%" >nul 2>&1
 exit /b
 
 :validate_number
