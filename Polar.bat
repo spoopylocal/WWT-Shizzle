@@ -492,9 +492,20 @@ if errorlevel 2 (
     <nul set /p ="%ESC%[38;2;210;235;255m                 Updating POLAR...%ESC%[0m"
     echo/
     > "%UPDATE_RUNNER%" echo @echo off
+    >> "%UPDATE_RUNNER%" echo setlocal
+    >> "%UPDATE_RUNNER%" echo set "UPDATE_TMP=%UPDATE_TMP%"
+    >> "%UPDATE_RUNNER%" echo set "SELF_PATH=%SELF_PATH%"
+    >> "%UPDATE_RUNNER%" echo timeout /t 2 /nobreak ^>nul
+    >> "%UPDATE_RUNNER%" echo for /l %%%%I in ^(1,1,10^) do ^(
+    >> "%UPDATE_RUNNER%" echo     move /y "%%UPDATE_TMP%%" "%%SELF_PATH%%" ^>nul 2^>^&1
+    >> "%UPDATE_RUNNER%" echo     if not errorlevel 1 if exist "%%SELF_PATH%%" goto launch_updated
+    >> "%UPDATE_RUNNER%" echo     timeout /t 1 /nobreak ^>nul
+    >> "%UPDATE_RUNNER%" echo ^)
+    >> "%UPDATE_RUNNER%" echo echo Failed to apply POLAR update.
+    >> "%UPDATE_RUNNER%" echo pause
+    >> "%UPDATE_RUNNER%" echo exit /b 1
+    >> "%UPDATE_RUNNER%" echo :launch_updated
     >> "%UPDATE_RUNNER%" echo timeout /t 1 /nobreak ^>nul
-    >> "%UPDATE_RUNNER%" echo move /y "%UPDATE_TMP%" "%SELF_PATH%" ^>nul 2^>^&1
-    >> "%UPDATE_RUNNER%" echo if errorlevel 1 pause ^& exit /b 1
     >> "%UPDATE_RUNNER%" echo start "" "%SELF_PATH%" --updated
     >> "%UPDATE_RUNNER%" echo del /f /q "%%~f0" ^>nul 2^>^&1
     start "" "%UPDATE_RUNNER%"
