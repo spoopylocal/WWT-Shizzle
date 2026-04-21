@@ -8,7 +8,7 @@ for /f %%a in ('echo prompt $E^| cmd') do set "ESC=%%a"
 
 set "POLAR_HOME=%LOCALAPPDATA%\POLAR"
 set "POLAR_SOFTWARE=%POLAR_HOME%\Software"
-set "POLAR_VERSION=1.0.4"
+set "POLAR_VERSION=1.0.5"
 set "POLAR_UPDATE_URL=https://raw.githubusercontent.com/spoopylocal/WWT-Shizzle/refs/heads/main/Polar.bat"
 set "BAR_LENGTH=30"
 
@@ -172,6 +172,10 @@ pause
 goto system
 
 :cleanup
+set "CLEAN_USER=0"
+set "CLEAN_WINTEMP=0"
+set "CLEAN_PREFETCH=0"
+:cleanup_menu
 cls
 echo.
 <nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
@@ -181,42 +185,70 @@ echo/
 <nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
 echo/
 echo.
-<nul set /p ="%ESC%[38;2;190;225;255m                 [1]%ESC%[0m %ESC%[38;2;180;220;255mRemove User Temp        (%TEMP%%)%ESC%[0m"
+set "USER_BOX= "
+set "WINTEMP_BOX= "
+set "PREFETCH_BOX= "
+if "!CLEAN_USER!"=="1" set "USER_BOX=x"
+if "!CLEAN_WINTEMP!"=="1" set "WINTEMP_BOX=x"
+if "!CLEAN_PREFETCH!"=="1" set "PREFETCH_BOX=x"
+<nul set /p ="%ESC%[38;2;190;225;255m                 [1]%ESC%[0m %ESC%[38;2;180;220;255m[!USER_BOX!] User Temp        (%TEMP%%)%ESC%[0m"
 echo/
-<nul set /p ="%ESC%[38;2;190;225;255m                 [2]%ESC%[0m %ESC%[38;2;180;220;255mRemove Windows Temp     (%SystemRoot%\Temp)%ESC%[0m"
+<nul set /p ="%ESC%[38;2;190;225;255m                 [2]%ESC%[0m %ESC%[38;2;180;220;255m[!WINTEMP_BOX!] Windows Temp     (%SystemRoot%\Temp)%ESC%[0m"
 echo/
-<nul set /p ="%ESC%[38;2;190;225;255m                 [3]%ESC%[0m %ESC%[38;2;180;220;255mRemove Prefetch         (%SystemRoot%\Prefetch)%ESC%[0m"
-echo/
-<nul set /p ="%ESC%[38;2;190;225;255m                 [4]%ESC%[0m %ESC%[38;2;180;220;255mRemove All Above%ESC%[0m"
-echo/
-<nul set /p ="%ESC%[38;2;190;225;255m                 [5]%ESC%[0m %ESC%[38;2;180;220;255mBack%ESC%[0m"
+<nul set /p ="%ESC%[38;2;190;225;255m                 [3]%ESC%[0m %ESC%[38;2;180;220;255m[!PREFETCH_BOX!] Prefetch         (%SystemRoot%\Prefetch)%ESC%[0m"
 echo/
 echo.
-<nul set /p ="%ESC%[38;2;225;242;255mPress a number to select:%ESC%[0m "
-call :read_choice 12345
+<nul set /p ="%ESC%[38;2;190;225;255m                 [4]%ESC%[0m %ESC%[38;2;180;220;255mRun Selected%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;190;225;255m                 [5]%ESC%[0m %ESC%[38;2;180;220;255mBack%ESC%[0m %ESC%[38;2;140;200;255m(Esc)%ESC%[0m"
+echo/
+echo.
+<nul set /p ="%ESC%[38;2;225;242;255mToggle 1-3, Run with 4/Enter/R, Back with 5/Esc:%ESC%[0m "
+call :read_cleanup_choice
 
+if errorlevel 9 goto banner
 if errorlevel 5 goto banner
-if errorlevel 4 goto cleanup_all
-if errorlevel 3 goto cleanup_prefetch
-if errorlevel 2 goto cleanup_wintemp
-if errorlevel 1 goto cleanup_usertemp
+if errorlevel 4 goto cleanup_selected
+if errorlevel 3 (
+    call :toggle_flag CLEAN_PREFETCH
+    goto cleanup_menu
+)
+if errorlevel 2 (
+    call :toggle_flag CLEAN_WINTEMP
+    goto cleanup_menu
+)
+if errorlevel 1 (
+    call :toggle_flag CLEAN_USER
+    goto cleanup_menu
+)
+goto cleanup_menu
 
-:cleanup_usertemp
-call :run_cleanup "%TEMP%" "User Temp"
-goto cleanup_done
+:cleanup_selected
+set "CLEAN_SELECTED=0"
 
-:cleanup_wintemp
-call :run_cleanup "%SystemRoot%\Temp" "Windows Temp"
-goto cleanup_done
+if "!CLEAN_USER!"=="1" (
+    set "CLEAN_SELECTED=1"
+    call :run_cleanup "%TEMP%" "User Temp"
+)
 
-:cleanup_prefetch
-call :run_cleanup "%SystemRoot%\Prefetch" "Prefetch"
-goto cleanup_done
+if "!CLEAN_WINTEMP!"=="1" (
+    set "CLEAN_SELECTED=1"
+    call :run_cleanup "%SystemRoot%\Temp" "Windows Temp"
+)
 
-:cleanup_all
-call :run_cleanup "%TEMP%" "User Temp"
-call :run_cleanup "%SystemRoot%\Temp" "Windows Temp"
-call :run_cleanup "%SystemRoot%\Prefetch" "Prefetch"
+if "!CLEAN_PREFETCH!"=="1" (
+    set "CLEAN_SELECTED=1"
+    call :run_cleanup "%SystemRoot%\Prefetch" "Prefetch"
+)
+
+if "!CLEAN_SELECTED!"=="0" (
+    echo.
+    <nul set /p ="%ESC%[38;2;255;210;180m                 Select at least one cleanup item.%ESC%[0m"
+    echo/
+    timeout /t 1 >nul
+    goto cleanup_menu
+)
+
 goto cleanup_done
 
 :cleanup_done
@@ -225,6 +257,31 @@ echo.
 echo/
 pause >nul
 goto cleanup
+
+:toggle_flag
+if "!%~1!"=="1" (
+    set "%~1=0"
+) else (
+    set "%~1=1"
+)
+exit /b
+
+:read_cleanup_choice
+set "KEY="
+for /f "usebackq delims=" %%K in (`powershell -NoProfile -Command "$k=$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'); if($k.VirtualKeyCode -eq 27){'ESC'} elseif($k.VirtualKeyCode -eq 13){'ENTER'} else {[string]$k.Character}"`) do set "KEY=%%K"
+if /i "!KEY!"=="ESC" exit /b 9
+if /i "!KEY!"=="ENTER" exit /b 4
+if /i "!KEY!"=="R" exit /b 4
+if "!KEY!"=="5" exit /b 5
+if "!KEY!"=="4" exit /b 4
+if "!KEY!"=="3" exit /b 3
+if "!KEY!"=="2" exit /b 2
+if "!KEY!"=="1" exit /b 1
+echo/
+<nul set /p ="%ESC%[38;2;255;210;180m                 Not an option. Try again.%ESC%[0m"
+echo/
+timeout /t 1 >nul
+exit /b 0
 
 :run_cleanup
 set "TARGET=%~1"
