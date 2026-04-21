@@ -8,7 +8,7 @@ for /f %%a in ('echo prompt $E^| cmd') do set "ESC=%%a"
 
 set "POLAR_HOME=%LOCALAPPDATA%\POLAR"
 set "POLAR_SOFTWARE=%POLAR_HOME%\Software"
-set "POLAR_VERSION=1.0.6"
+set "POLAR_VERSION=1.0.7"
 set "POLAR_UPDATE_URL=https://raw.githubusercontent.com/spoopylocal/WWT-Shizzle/refs/heads/main/Polar.bat"
 set "BAR_LENGTH=30"
 
