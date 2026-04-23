@@ -8,14 +8,29 @@ for /f %%a in ('echo prompt $E^| cmd') do set "ESC=%%a"
 
 set "POLAR_HOME=%LOCALAPPDATA%\POLAR"
 set "POLAR_SOFTWARE=%POLAR_HOME%\Software"
-set "POLAR_VERSION=1.0.7"
+set "POLAR_LOGS=%POLAR_HOME%\Logs"
+set "POLAR_SETTINGS=%POLAR_HOME%\settings.ini"
+set "POLAR_VERSION=1.0.8"
 set "POLAR_UPDATE_URL=https://raw.githubusercontent.com/spoopylocal/WWT-Shizzle/refs/heads/main/Polar.bat"
 set "BAR_LENGTH=30"
+set "POLAR_AUTO_UPDATE=1"
+set "POLAR_CONFIRM_CLEANUP=1"
+set "POLAR_PING_TARGET=google.com"
+set "POLAR_PING_COUNT=4"
 
 if not exist "%POLAR_HOME%" mkdir "%POLAR_HOME%" >nul 2>&1
 if not exist "%POLAR_SOFTWARE%" mkdir "%POLAR_SOFTWARE%" >nul 2>&1
+if not exist "%POLAR_LOGS%" mkdir "%POLAR_LOGS%" >nul 2>&1
 
-if /i not "%~1"=="--updated" call :self_update
+for /f %%D in ('powershell -NoProfile -Command "Get-Date -Format yyyy-MM-dd"') do set "POLAR_LOG_DATE=%%D"
+set "POLAR_LOG_FILE=%POLAR_LOGS%\polar-%POLAR_LOG_DATE%.log"
+
+call :load_settings
+call :detect_admin
+call :log "POLAR started from %~f0"
+
+if /i not "%~1"=="--updated" if "%POLAR_AUTO_UPDATE%"=="1" call :self_update
+if /i not "%~1"=="--updated" if not "%POLAR_AUTO_UPDATE%"=="1" call :log "Auto-update skipped by settings"
 
 :banner
 cls
@@ -41,6 +56,8 @@ echo/
 <nul set /p ="%ESC%[38;2;210;235;255m                 ==========================%ESC%[0m"
 echo/
 echo.
+call :show_status
+echo.
 <nul set /p ="%ESC%[38;2;220;240;255m              [1]%ESC%[0m %ESC%[38;2;190;225;255mNetwork Tools%ESC%[0m"
 echo/
 <nul set /p ="%ESC%[38;2;210;235;255m              [2]%ESC%[0m %ESC%[38;2;180;220;255mSystem Tools%ESC%[0m"
@@ -51,13 +68,16 @@ echo/
 echo/
 <nul set /p ="%ESC%[38;2;180;220;255m              [5]%ESC%[0m %ESC%[38;2;150;205;255mCredits%ESC%[0m"
 echo/
-<nul set /p ="%ESC%[38;2;170;215;255m              [6]%ESC%[0m %ESC%[38;2;140;200;255mExit%ESC%[0m"
+<nul set /p ="%ESC%[38;2;170;215;255m              [6]%ESC%[0m %ESC%[38;2;140;200;255mSettings%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;160;210;255m              [7]%ESC%[0m %ESC%[38;2;130;195;255mExit%ESC%[0m"
 echo/
 echo.
 <nul set /p ="%ESC%[38;2;225;242;255mPress a number to select:%ESC%[0m "
-call :read_choice 123456
+call :read_choice 1234567
 
-if errorlevel 6 goto end
+if errorlevel 7 goto end
+if errorlevel 6 goto settings
 if errorlevel 5 goto credits
 if errorlevel 4 goto software
 if errorlevel 3 goto cleanup
@@ -74,7 +94,9 @@ echo/
 <nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
 echo/
 echo.
-<nul set /p ="%ESC%[38;2;190;225;255m                 [1]%ESC%[0m %ESC%[38;2;180;220;255mPing Google%ESC%[0m"
+call :show_status
+echo.
+<nul set /p ="%ESC%[38;2;190;225;255m                 [1]%ESC%[0m %ESC%[38;2;180;220;255mPing Target%ESC%[0m"
 echo/
 <nul set /p ="%ESC%[38;2;190;225;255m                 [2]%ESC%[0m %ESC%[38;2;180;220;255mShow IP Config%ESC%[0m"
 echo/
@@ -91,25 +113,31 @@ if errorlevel 1 goto pinggoogle
 :pinggoogle
 cls
 echo.
-<nul set /p ="%ESC%[38;2;230;245;255m                 Ping Google%ESC%[0m"
+<nul set /p ="%ESC%[38;2;230;245;255m                 Ping Target%ESC%[0m"
 echo/
 echo.
-<nul set /p ="%ESC%[38;2;225;242;255m                 Number of pings [4]: %ESC%[0m"
+<nul set /p ="%ESC%[38;2;225;242;255m                 Target [!POLAR_PING_TARGET!]: %ESC%[0m"
+set "PING_TARGET="
+set /p "PING_TARGET="
+if not defined PING_TARGET set "PING_TARGET=!POLAR_PING_TARGET!"
+echo.
+<nul set /p ="%ESC%[38;2;225;242;255m                 Number of pings [!POLAR_PING_COUNT!]: %ESC%[0m"
 set "PING_COUNT="
 set /p "PING_COUNT="
-if not defined PING_COUNT set "PING_COUNT=4"
+if not defined PING_COUNT set "PING_COUNT=!POLAR_PING_COUNT!"
 call :validate_number "%PING_COUNT%"
 if errorlevel 1 (
     echo.
-    <nul set /p ="%ESC%[38;2;255;210;180m                 Not a valid number. Using 4 pings.%ESC%[0m"
+    <nul set /p ="%ESC%[38;2;255;210;180m                 Not a valid number. Using !POLAR_PING_COUNT! pings.%ESC%[0m"
     echo/
-    set "PING_COUNT=4"
+    set "PING_COUNT=!POLAR_PING_COUNT!"
 )
+call :log "Network ping requested: target=!PING_TARGET!, count=!PING_COUNT!"
 echo.
-<nul set /p ="%ESC%[38;2;230;245;255m                 Pinging google.com !PING_COUNT! time(s)...%ESC%[0m"
+<nul set /p ="%ESC%[38;2;230;245;255m                 Pinging !PING_TARGET! !PING_COUNT! time(s)...%ESC%[0m"
 echo/
 echo.
-ping -n !PING_COUNT! google.com
+ping -n !PING_COUNT! "!PING_TARGET!"
 echo.
 pause
 goto network
@@ -134,6 +162,8 @@ echo/
 echo/
 <nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
 echo/
+echo.
+call :show_status
 echo.
 <nul set /p ="%ESC%[38;2;190;225;255m                 [1]%ESC%[0m %ESC%[38;2;180;220;255mSystem Info%ESC%[0m"
 echo/
@@ -185,6 +215,8 @@ echo/
 <nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
 echo/
 echo.
+call :show_status
+echo.
 set "USER_BOX= "
 set "WINTEMP_BOX= "
 set "PREFETCH_BOX= "
@@ -225,20 +257,10 @@ goto cleanup_menu
 
 :cleanup_selected
 set "CLEAN_SELECTED=0"
-
-if "!CLEAN_USER!"=="1" (
-    set "CLEAN_SELECTED=1"
-    call :run_cleanup "%TEMP%" "User Temp"
-)
-
-if "!CLEAN_WINTEMP!"=="1" (
-    set "CLEAN_SELECTED=1"
-    call :run_cleanup "%SystemRoot%\Temp" "Windows Temp"
-)
-
-if "!CLEAN_PREFETCH!"=="1" (
-    set "CLEAN_SELECTED=1"
-    call :run_cleanup "%SystemRoot%\Prefetch" "Prefetch"
+if "!CLEAN_SELECTED!"=="0" (
+    if "!CLEAN_USER!"=="1" set "CLEAN_SELECTED=1"
+    if "!CLEAN_WINTEMP!"=="1" set "CLEAN_SELECTED=1"
+    if "!CLEAN_PREFETCH!"=="1" set "CLEAN_SELECTED=1"
 )
 
 if "!CLEAN_SELECTED!"=="0" (
@@ -249,6 +271,13 @@ if "!CLEAN_SELECTED!"=="0" (
     goto cleanup_menu
 )
 
+call :cleanup_preview
+if errorlevel 1 goto cleanup_menu
+
+if "!CLEAN_USER!"=="1" call :run_cleanup "%TEMP%" "User Temp"
+if "!CLEAN_WINTEMP!"=="1" call :run_cleanup "%SystemRoot%\Temp" "Windows Temp"
+if "!CLEAN_PREFETCH!"=="1" call :run_cleanup "%SystemRoot%\Prefetch" "Prefetch"
+
 goto cleanup_done
 
 :cleanup_done
@@ -257,6 +286,71 @@ echo.
 echo/
 pause >nul
 goto cleanup
+
+:cleanup_preview
+cls
+echo.
+<nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;230;245;255m                      Cleanup Preview%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
+echo/
+echo.
+call :show_status
+echo.
+<nul set /p ="%ESC%[38;2;210;235;255m                 Selected cleanup targets:%ESC%[0m"
+echo/
+echo.
+if "!CLEAN_USER!"=="1" call :show_cleanup_target "%TEMP%" "User Temp"
+if "!CLEAN_WINTEMP!"=="1" call :show_cleanup_target "%SystemRoot%\Temp" "Windows Temp"
+if "!CLEAN_PREFETCH!"=="1" call :show_cleanup_target "%SystemRoot%\Prefetch" "Prefetch"
+if "!POLAR_ADMIN!"=="No" if "!CLEAN_WINTEMP!"=="1" (
+    <nul set /p ="%ESC%[38;2;255;210;180m                 Admin is not enabled. Windows Temp may only partially clean.%ESC%[0m"
+    echo/
+)
+if "!POLAR_ADMIN!"=="No" if "!CLEAN_PREFETCH!"=="1" (
+    <nul set /p ="%ESC%[38;2;255;210;180m                 Admin is not enabled. Prefetch may only partially clean.%ESC%[0m"
+    echo/
+)
+echo.
+if "!POLAR_CONFIRM_CLEANUP!"=="1" (
+    <nul set /p ="%ESC%[38;2;255;225;180m                 Delete files in these locations? Y/N: %ESC%[0m"
+    call :read_yes_no
+    if errorlevel 2 (
+        call :log "Cleanup cancelled at preview"
+        exit /b 1
+    )
+)
+call :log "Cleanup approved"
+exit /b 0
+
+:show_cleanup_target
+set "TARGET=%~1"
+set "LABEL=%~2"
+set "CLEAN_FILES=0"
+set "CLEAN_FOLDERS=0"
+set "CLEAN_SIZE=0 B"
+
+if not exist "%TARGET%" (
+    <nul set /p ="%ESC%[38;2;255;190;190m                 %LABEL% - path not found: %TARGET%%ESC%[0m"
+    echo/
+    call :log "Cleanup preview missing path: %LABEL% (%TARGET%)"
+    exit /b
+)
+
+for /f "usebackq tokens=1,2,* delims=|" %%A in (`powershell -NoProfile -Command "$p=$env:TARGET; $items=Get-ChildItem -LiteralPath $p -Force -Recurse -ErrorAction SilentlyContinue; $files=@($items | Where-Object { -not $_.PSIsContainer }); $folders=@($items | Where-Object { $_.PSIsContainer }); $bytes=($files | Measure-Object -Property Length -Sum).Sum; if($null -eq $bytes){$bytes=0}; $size=if($bytes -ge 1GB){'{0:N2} GB' -f ($bytes/1GB)}elseif($bytes -ge 1MB){'{0:N2} MB' -f ($bytes/1MB)}elseif($bytes -ge 1KB){'{0:N2} KB' -f ($bytes/1KB)}else{('{0} B' -f $bytes)}; '{0}|{1}|{2}' -f $files.Count,$folders.Count,$size"`) do (
+    set "CLEAN_FILES=%%A"
+    set "CLEAN_FOLDERS=%%B"
+    set "CLEAN_SIZE=%%C"
+)
+
+<nul set /p ="%ESC%[38;2;190;225;255m                 %LABEL% - !CLEAN_FILES! files, !CLEAN_FOLDERS! folders, !CLEAN_SIZE!%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;140;200;255m                    %TARGET%%ESC%[0m"
+echo/
+call :log "Cleanup preview: %LABEL% files=!CLEAN_FILES!, folders=!CLEAN_FOLDERS!, size=!CLEAN_SIZE!, target=%TARGET%"
+exit /b
 
 :toggle_flag
 if "!%~1!"=="1" (
@@ -306,22 +400,25 @@ if not exist "%TARGET%" (
     <nul set /p ="%ESC%[1A"
     <nul set /p ="%ESC%[2K%ESC%[38;2;255;190;190m                 %LABEL% path not found.%ESC%[0m"
     echo/
+    call :log "Cleanup skipped, path not found: %LABEL% (%TARGET%)"
     timeout /t 1 >nul
     exit /b
 )
 
+call :log "Cleanup started: %LABEL% (%TARGET%)"
 call :draw_progress 0 "Preparing %LABEL%..."
 call :sleep 1
 call :draw_progress 20 "Scanning %LABEL%..."
-dir /a /s "%TARGET%" >nul 2>&1
+dir /a /s "%TARGET%" >nul 2>>"%POLAR_LOG_FILE%"
 call :sleep 1
 call :draw_progress 45 "Removing files from %LABEL%..."
-del /f /q /s "%TARGET%\*" >nul 2>&1
+del /f /q /s "%TARGET%\*" >nul 2>>"%POLAR_LOG_FILE%"
 call :sleep 1
 call :draw_progress 75 "Removing folders from %LABEL%..."
-for /d %%D in ("%TARGET%\*") do rd /s /q "%%D" >nul 2>&1
+for /d %%D in ("%TARGET%\*") do rd /s /q "%%D" >nul 2>>"%POLAR_LOG_FILE%"
 call :sleep 1
 call :draw_progress 100 "Finished removing %LABEL%."
+call :log "Cleanup finished: %LABEL% (%TARGET%)"
 call :sleep 1
 exit /b
 
@@ -357,6 +454,8 @@ echo/
 <nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
 echo/
 echo.
+call :show_status
+echo.
 
 set "OAOOV_DIR=%POLAR_SOFTWARE%\Outbound Auto OV"
 set "OAOOV_EXE=%OAOOV_DIR%\Outbound Auto OV.exe"
@@ -385,9 +484,91 @@ set "APP_EXE=%APP_DIR%\Outbound Auto OV.exe"
 set "APP_VERSION=%APP_DIR%\version.txt"
 set "GITHUB_REPO=spoopylocal/WWT-Shizzle"
 set "ASSET_NAME=Outbound.Auto.OV.exe"
+goto software_app_menu
 
+:software_app_menu
+cls
+echo.
+<nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;230;245;255m                    %APP_NAME%%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
+echo/
+echo.
+call :show_status
+echo.
+if exist "%APP_EXE%" (
+    set "APP_STATUS=Installed"
+) else (
+    set "APP_STATUS=Not Installed"
+)
+<nul set /p ="%ESC%[38;2;210;235;255m                 Status: !APP_STATUS!%ESC%[0m"
+echo/
+echo.
+<nul set /p ="%ESC%[38;2;190;225;255m                 [1]%ESC%[0m %ESC%[38;2;180;220;255mLaunch%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;190;225;255m                 [2]%ESC%[0m %ESC%[38;2;180;220;255mCheck for Update / Install%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;190;225;255m                 [3]%ESC%[0m %ESC%[38;2;180;220;255mReinstall%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;190;225;255m                 [4]%ESC%[0m %ESC%[38;2;180;220;255mOpen Install Folder%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;190;225;255m                 [5]%ESC%[0m %ESC%[38;2;180;220;255mUninstall%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;190;225;255m                 [6]%ESC%[0m %ESC%[38;2;180;220;255mBack%ESC%[0m"
+echo/
+echo.
+<nul set /p ="%ESC%[38;2;225;242;255mPress a number to select:%ESC%[0m "
+call :read_choice 123456
+
+if errorlevel 6 goto software
+if errorlevel 5 goto uninstall_app
+if errorlevel 4 goto open_app_folder
+if errorlevel 3 goto reinstall_app
+if errorlevel 2 goto update_app
+if errorlevel 1 goto launch_app
+
+:launch_app
+set "APP_ACTION=launch"
 call :HandleReleaseExe
-goto software
+goto software_app_menu
+
+:update_app
+set "APP_ACTION=update"
+call :HandleReleaseExe
+goto software_app_menu
+
+:reinstall_app
+echo.
+<nul set /p ="%ESC%[38;2;255;225;180m                 Reinstall %APP_NAME%? Y/N: %ESC%[0m"
+call :read_yes_no
+if errorlevel 2 goto software_app_menu
+set "APP_ACTION=reinstall"
+call :HandleReleaseExe
+goto software_app_menu
+
+:open_app_folder
+if not exist "%APP_DIR%" mkdir "%APP_DIR%" >nul 2>&1
+call :log "Opening software folder: %APP_DIR%"
+start "" "%APP_DIR%"
+goto software_app_menu
+
+:uninstall_app
+if not exist "%APP_DIR%" (
+    echo.
+    <nul set /p ="%ESC%[38;2;255;210;180m                 %APP_NAME% is not installed.%ESC%[0m"
+    echo/
+    timeout /t 1 >nul
+    goto software_app_menu
+)
+echo.
+<nul set /p ="%ESC%[38;2;255;225;180m                 Remove %APP_NAME% from POLAR? Y/N: %ESC%[0m"
+call :read_yes_no
+if errorlevel 2 goto software_app_menu
+rd /s /q "%APP_DIR%" >nul 2>>"%POLAR_LOG_FILE%"
+call :log "Uninstalled %APP_NAME% from %APP_DIR%"
+goto software_app_menu
 
 :HandleReleaseExe
 cls
@@ -403,24 +584,118 @@ echo.
 if not exist "%APP_DIR%" mkdir "%APP_DIR%" >nul 2>&1
 
 echo.
-<nul set /p ="%ESC%[38;2;210;235;255m                 Checking GitHub release for %APP_NAME%...%ESC%[0m"
+<nul set /p ="%ESC%[38;2;210;235;255m                 Working on %APP_NAME% (!APP_ACTION!)...%ESC%[0m"
 echo/
+call :log "Software action started: %APP_NAME% (!APP_ACTION!)"
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; try { [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $repo=$env:GITHUB_REPO; $asset=$env:ASSET_NAME; $dir=$env:APP_DIR; $exe=$env:APP_EXE; $verFile=$env:APP_VERSION; $headers=@{'User-Agent'='POLAR'}; New-Item -ItemType Directory -Force -Path $dir | Out-Null; $release=Invoke-RestMethod -Uri ('https://api.github.com/repos/'+$repo+'/releases/latest') -Headers $headers; $remoteVersion=[string]$release.tag_name; $localVersion=if(Test-Path $verFile){((Get-Content $verFile -Raw).Trim())}else{''}; $match=$null; foreach($a in $release.assets){ if($a.name -eq $asset){ $match=$a; break } }; if(-not $match){throw ('Release asset not found: '+$asset)}; $download=$match.browser_download_url; $badLocal=(Test-Path $exe) -and ((Get-Item $exe).Length -lt 100000); $needsDownload=(-not (Test-Path $exe)) -or $badLocal -or ($localVersion -ne $remoteVersion); if($needsDownload){ Write-Host ('Downloading '+$asset+' '+$remoteVersion+'...'); $tmp=Join-Path $env:TEMP ('polar_'+[guid]::NewGuid().ToString()+'.exe'); Invoke-WebRequest -Uri $download -OutFile $tmp -UseBasicParsing -Headers $headers; $item=Get-Item $tmp; if($item.Length -lt 100000){Remove-Item $tmp -Force; throw ('Downloaded file is too small: '+$item.Length+' bytes')}; $fs=[IO.File]::OpenRead($tmp); try{$b0=$fs.ReadByte(); $b1=$fs.ReadByte()}finally{$fs.Dispose()}; if($b0 -ne 77 -or $b1 -ne 90){Remove-Item $tmp -Force; throw 'Downloaded file is not a valid Windows EXE'}; Move-Item -Path $tmp -Destination $exe -Force; Set-Content -Path $verFile -Value $remoteVersion } else { Write-Host ('Already up to date: '+$remoteVersion) }; Write-Host ('Launching '+$env:APP_NAME+'...'); Start-Process -FilePath $exe; Start-Sleep -Seconds 2; exit 0 } catch { Write-Host ''; Write-Host ('ERROR: '+$_.Exception.Message); exit 1 }"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; try { [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $action=$env:APP_ACTION; $repo=$env:GITHUB_REPO; $asset=$env:ASSET_NAME; $dir=$env:APP_DIR; $exe=$env:APP_EXE; $verFile=$env:APP_VERSION; $log=$env:POLAR_LOG_FILE; $headers=@{'User-Agent'='POLAR'}; New-Item -ItemType Directory -Force -Path $dir | Out-Null; if($action -eq 'launch'){ if(-not (Test-Path $exe)){ throw ($env:APP_NAME+' is not installed. Choose Check for Update / Install first.') }; Add-Content -Path $log -Value ((Get-Date -Format s)+' Launching '+$env:APP_NAME); Start-Process -FilePath $exe; Start-Sleep -Seconds 1; exit 0 }; if($action -eq 'reinstall'){ if(Test-Path $exe){ Remove-Item -LiteralPath $exe -Force -ErrorAction SilentlyContinue }; if(Test-Path $verFile){ Remove-Item -LiteralPath $verFile -Force -ErrorAction SilentlyContinue } }; Write-Host ('Checking GitHub release for '+$env:APP_NAME+'...'); $release=Invoke-RestMethod -Uri ('https://api.github.com/repos/'+$repo+'/releases/latest') -Headers $headers; $remoteVersion=[string]$release.tag_name; $localVersion=if(Test-Path $verFile){((Get-Content $verFile -Raw).Trim())}else{''}; $match=$null; foreach($a in $release.assets){ if($a.name -eq $asset){ $match=$a; break } }; if(-not $match){throw ('Release asset not found: '+$asset)}; $download=$match.browser_download_url; $badLocal=(Test-Path $exe) -and ((Get-Item $exe).Length -lt 100000); $needsDownload=(-not (Test-Path $exe)) -or $badLocal -or ($localVersion -ne $remoteVersion) -or ($action -eq 'reinstall'); if($needsDownload){ Write-Host ('Downloading '+$asset+' '+$remoteVersion+'...'); $tmp=Join-Path $env:TEMP ('polar_'+[guid]::NewGuid().ToString()+'.exe'); Invoke-WebRequest -Uri $download -OutFile $tmp -UseBasicParsing -Headers $headers; $item=Get-Item $tmp; if($item.Length -lt 100000){Remove-Item $tmp -Force; throw ('Downloaded file is too small: '+$item.Length+' bytes')}; $fs=[IO.File]::OpenRead($tmp); try{$b0=$fs.ReadByte(); $b1=$fs.ReadByte()}finally{$fs.Dispose()}; if($b0 -ne 77 -or $b1 -ne 90){Remove-Item $tmp -Force; throw 'Downloaded file is not a valid Windows EXE'}; Move-Item -Path $tmp -Destination $exe -Force; Set-Content -Path $verFile -Value $remoteVersion; Write-Host ('Installed '+$remoteVersion) } else { Write-Host ('Already up to date: '+$remoteVersion) }; Add-Content -Path $log -Value ((Get-Date -Format s)+' Software action '+$action+' completed for '+$env:APP_NAME); exit 0 } catch { if($env:POLAR_LOG_FILE){ Add-Content -Path $env:POLAR_LOG_FILE -Value ((Get-Date -Format s)+' ERROR '+$_.Exception.Message) }; Write-Host ''; Write-Host ('ERROR: '+$_.Exception.Message); exit 1 }"
 
 if errorlevel 1 (
     echo.
-    <nul set /p ="%ESC%[38;2;255;180;180m                 Update or launch failed.%ESC%[0m"
+    <nul set /p ="%ESC%[38;2;255;180;180m                 Software action failed. See log for details.%ESC%[0m"
     echo/
     pause
+    call :log "Software action failed: %APP_NAME% (!APP_ACTION!)"
     exit /b
 )
 
 echo.
-<nul set /p ="%ESC%[38;2;180;255;210m                 %APP_NAME% is ready.%ESC%[0m"
+<nul set /p ="%ESC%[38;2;180;255;210m                 %APP_NAME% action complete.%ESC%[0m"
 echo/
-timeout /t 1 >nul
+call :log "Software action completed: %APP_NAME% (!APP_ACTION!)"
+timeout /t 2 >nul
 exit /b
+
+:settings
+cls
+echo.
+<nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;230;245;255m                         Settings%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;220;240;255m                 ==========================%ESC%[0m"
+echo/
+echo.
+call :show_status
+echo.
+if "%POLAR_AUTO_UPDATE%"=="1" (set "AUTO_TEXT=On") else (set "AUTO_TEXT=Off")
+if "%POLAR_CONFIRM_CLEANUP%"=="1" (set "CONFIRM_TEXT=On") else (set "CONFIRM_TEXT=Off")
+<nul set /p ="%ESC%[38;2;190;225;255m                 [1]%ESC%[0m %ESC%[38;2;180;220;255mAuto-update: !AUTO_TEXT!%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;190;225;255m                 [2]%ESC%[0m %ESC%[38;2;180;220;255mCleanup confirmation: !CONFIRM_TEXT!%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;190;225;255m                 [3]%ESC%[0m %ESC%[38;2;180;220;255mDefault ping target: !POLAR_PING_TARGET!%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;190;225;255m                 [4]%ESC%[0m %ESC%[38;2;180;220;255mDefault ping count: !POLAR_PING_COUNT!%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;190;225;255m                 [5]%ESC%[0m %ESC%[38;2;180;220;255mOpen Logs Folder%ESC%[0m"
+echo/
+<nul set /p ="%ESC%[38;2;190;225;255m                 [6]%ESC%[0m %ESC%[38;2;180;220;255mBack%ESC%[0m"
+echo/
+echo.
+<nul set /p ="%ESC%[38;2;225;242;255mPress a number to select:%ESC%[0m "
+call :read_choice 123456
+
+if errorlevel 6 goto banner
+if errorlevel 5 goto settings_open_logs
+if errorlevel 4 goto settings_ping_count
+if errorlevel 3 goto settings_ping_target
+if errorlevel 2 goto settings_confirm_cleanup
+if errorlevel 1 goto settings_auto_update
+
+:settings_auto_update
+if "%POLAR_AUTO_UPDATE%"=="1" (set "POLAR_AUTO_UPDATE=0") else (set "POLAR_AUTO_UPDATE=1")
+call :save_settings
+call :log "Setting changed: auto-update=%POLAR_AUTO_UPDATE%"
+goto settings
+
+:settings_confirm_cleanup
+if "%POLAR_CONFIRM_CLEANUP%"=="1" (set "POLAR_CONFIRM_CLEANUP=0") else (set "POLAR_CONFIRM_CLEANUP=1")
+call :save_settings
+call :log "Setting changed: cleanup confirmation=%POLAR_CONFIRM_CLEANUP%"
+goto settings
+
+:settings_ping_target
+echo.
+<nul set /p ="%ESC%[38;2;225;242;255m                 New ping target: %ESC%[0m"
+set "NEW_TARGET="
+set /p "NEW_TARGET="
+if defined NEW_TARGET set "POLAR_PING_TARGET=!NEW_TARGET!"
+echo(!POLAR_PING_TARGET!| findstr /r /c:"^[A-Za-z0-9][A-Za-z0-9.-]*$" >nul
+if errorlevel 1 (
+    echo.
+    <nul set /p ="%ESC%[38;2;255;210;180m                 Use only letters, numbers, dots, and dashes.%ESC%[0m"
+    echo/
+    set "POLAR_PING_TARGET=google.com"
+    timeout /t 1 >nul
+)
+call :save_settings
+call :log "Setting changed: ping target=%POLAR_PING_TARGET%"
+goto settings
+
+:settings_ping_count
+echo.
+<nul set /p ="%ESC%[38;2;225;242;255m                 New ping count: %ESC%[0m"
+set "NEW_COUNT="
+set /p "NEW_COUNT="
+call :validate_number "%NEW_COUNT%"
+if errorlevel 1 (
+    echo.
+    <nul set /p ="%ESC%[38;2;255;210;180m                 Not a valid number.%ESC%[0m"
+    echo/
+    timeout /t 1 >nul
+    goto settings
+)
+set "POLAR_PING_COUNT=!NEW_COUNT!"
+call :save_settings
+call :log "Setting changed: ping count=%POLAR_PING_COUNT%"
+goto settings
+
+:settings_open_logs
+if not exist "%POLAR_LOGS%" mkdir "%POLAR_LOGS%" >nul 2>&1
+start "" "%POLAR_LOGS%"
+call :log "Opened logs folder"
+goto settings
 
 :credits
 cls
@@ -454,6 +729,66 @@ echo/
 
 pause >nul
 goto banner
+
+:show_status
+call :detect_admin
+if "%POLAR_AUTO_UPDATE%"=="1" (set "AUTO_LABEL=On") else (set "AUTO_LABEL=Off")
+<nul set /p ="%ESC%[38;2;150;205;255m                 POLAR v%POLAR_VERSION% ^| Admin: !POLAR_ADMIN! ^| Auto-update: !AUTO_LABEL!%ESC%[0m"
+echo/
+exit /b
+
+:detect_admin
+net session >nul 2>&1
+if errorlevel 1 (
+    set "POLAR_ADMIN=No"
+) else (
+    set "POLAR_ADMIN=Yes"
+)
+exit /b
+
+:load_settings
+if not exist "%POLAR_SETTINGS%" (
+    call :save_settings
+    exit /b
+)
+for /f "usebackq tokens=1,* delims==" %%A in ("%POLAR_SETTINGS%") do (
+    if /i "%%A"=="AUTO_UPDATE" set "POLAR_AUTO_UPDATE=%%B"
+    if /i "%%A"=="CONFIRM_CLEANUP" set "POLAR_CONFIRM_CLEANUP=%%B"
+    if /i "%%A"=="PING_TARGET" set "POLAR_PING_TARGET=%%B"
+    if /i "%%A"=="PING_COUNT" set "POLAR_PING_COUNT=%%B"
+)
+if not "%POLAR_AUTO_UPDATE%"=="1" if not "%POLAR_AUTO_UPDATE%"=="0" set "POLAR_AUTO_UPDATE=1"
+if not "%POLAR_CONFIRM_CLEANUP%"=="1" if not "%POLAR_CONFIRM_CLEANUP%"=="0" set "POLAR_CONFIRM_CLEANUP=1"
+call :validate_number "%POLAR_PING_COUNT%"
+if errorlevel 1 set "POLAR_PING_COUNT=4"
+if not defined POLAR_PING_TARGET set "POLAR_PING_TARGET=google.com"
+call :save_settings
+exit /b
+
+:save_settings
+> "%POLAR_SETTINGS%" echo AUTO_UPDATE=%POLAR_AUTO_UPDATE%
+>> "%POLAR_SETTINGS%" echo CONFIRM_CLEANUP=%POLAR_CONFIRM_CLEANUP%
+>> "%POLAR_SETTINGS%" echo PING_TARGET=%POLAR_PING_TARGET%
+>> "%POLAR_SETTINGS%" echo PING_COUNT=%POLAR_PING_COUNT%
+exit /b
+
+:log
+if not exist "%POLAR_LOGS%" mkdir "%POLAR_LOGS%" >nul 2>&1
+set "LOG_MESSAGE=%~1"
+powershell -NoProfile -Command "Add-Content -LiteralPath $env:POLAR_LOG_FILE -Value ('[{0}] {1}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $env:LOG_MESSAGE)" >nul 2>&1
+exit /b
+
+:read_yes_no
+set "KEY="
+for /f "usebackq delims=" %%K in (`powershell -NoProfile -Command "$k=$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'); [string]$k.Character"`) do set "KEY=%%K"
+echo/
+if /i "!KEY!"=="Y" exit /b 1
+if /i "!KEY!"=="N" exit /b 2
+echo.
+<nul set /p ="%ESC%[38;2;255;210;180m                 Please choose Y or N.%ESC%[0m"
+echo/
+timeout /t 1 >nul
+goto read_yes_no
 
 :read_choice
 set "CHOICES=%~1"
