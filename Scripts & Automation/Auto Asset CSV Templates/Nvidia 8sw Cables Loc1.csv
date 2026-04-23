@@ -1,0 +1,51 @@
+NUMBER,PROMPT,KEY,DATA
+1,LPN          >,BLANK,
+2,From Loc     >,From Loc:,ZL4PCSTCK01
+3,Item         >,Item:,1415-A-048-RED.ACTUAL.2380032.MSN/CSCO
+4,Qty          :,QTY:,5
+5,To Loc       >,To Loc:,ZL4ASSET01
+6,<Done>,BLANK,
+7,LPN          >,BLANK,
+8,From Loc     >,From Loc:,ZL4PCSTCK02
+9,Item         >,Item:,1415-A-048-BLU.ACTUAL.2380032.MSN/CSCO
+10,Qty          :,QTY:,5
+11,To Loc       >,To Loc:,ZL4ASSET01
+12,<Done>,BLANK,
+13,LPN          >,BLANK,
+14,From Loc     >,From Loc:,ZL4PCSTCK03
+15,Item         >,Item:,1415-A-060-RED.ACTUAL.2380032.MSN/CSCO
+16,Qty          :,QTY:,2
+17,To Loc       >,To Loc:,ZL4ASSET01
+18,<Done>,BLANK,
+19,LPN          >,BLANK,
+20,From Loc     >,From Loc:,ZL4PCSTCK04
+21,Item         >,Item:,1415-A-060-BLU.ACTUAL.2380032.MSN/CSCO
+22,Qty          :,QTY:,2
+23,To Loc       >,To Loc:,ZL4ASSET01
+24,<Done>,BLANK,
+25,LPN          >,BLANK,
+26,From Loc     >,From Loc:,ZL4PCSTCK05
+27,Item         >,Item:,2015-WC-048-RED.ACTUAL.2380032.MSN/CSCO
+28,Qty          :,QTY:,2
+29,To Loc       >,To Loc:,ZL4ASSET01
+30,<Done>,BLANK,
+31,LPN          >,BLANK,
+32,From Loc     >,From Loc:,ZL4PCSTCK06
+33,Item         >,Item:,2015-WC-048-BLU.ACTUAL.2380032.MSN/CSCO
+34,Qty          :,QTY:,2
+35,To Loc       >,To Loc:,ZL4ASSET01
+36,<Done>,BLANK,
+37,LPN          >,BLANK,
+38,From Loc     >,From Loc:,ZL4PCSTCK07
+39,Item         >,Item:,2015-WC-060-RED.ACTUAL.2380032.MSN/CSCO
+40,Qty          :,QTY:,7
+41,To Loc       >,To Loc:,ZL4ASSET01
+42,<Done>,BLANK,
+43,LPN          >,BLANK,
+44,From Loc     >,From Loc:,ZL4PCSTCK08
+45,Item         >,Item:,2015-WC-060-BLU.ACTUAL.2380032.MSN/CSCO
+46,Qty          :,QTY:,7
+47,To Loc       >,To Loc:,ZL4ASSET01
+48,<Done>,BLANK,
+49,FINISHED,,
+50,SUBTRANSFER,,
